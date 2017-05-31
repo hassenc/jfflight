@@ -34,15 +34,25 @@ def getMaxSpan(date):
 
 
 def getNbrOfCP(date,date2):
-  start = datetime.strptime(date, "%Y-%m-%d")
-  end = datetime.strptime(date2, "%Y-%m-%d")
+  start = date
+  end = date2
+  print date
+  print date2.date()
   temp = start
   total = 0
   while temp <= end:
     if (isWorkable(temp) is True):
       total = total + 1
     temp = temp + timedelta(days=1)
+  print start.hour
+  if ((isWorkable(start) is True) and (start.hour>20)):
+    print "yooooooo"
+    print start
+    total = total - 1
+  if ((isWorkable(end) is True) and (start.hour<7)):
+    total = total - 1
   return total
+
 
 def getDuration(date,date2):
   start = datetime.strptime(date, "%Y-%m-%d")
@@ -68,10 +78,7 @@ def dates(lastDate):
   date = today
   i = 0
   while ((date.date() < lastDate) and (i<400)):
-    i = i+1;
-    print date
-    print date.weekday()
-    print i
+    i = i+1
     if (date):
     # if ((isWorkable(date) is False) or (isWorkable(date + timedelta(days=1)) is False)):
       for endDate in getEndDates(date):
@@ -136,46 +143,63 @@ headers = {
         #     "depdate": "2017-06-08",
         #     "retdate": "2017-06-15"
         # }
-def getbestflights(mylist):
+def getbestflights(mylist, options):
   mylist = [x for x in mylist if getDuration(x['depdate'],x['retdate'])>1]
-  return nicefy(sorted(mylist, key=lambda k: 
-    k['contents']['price'] + 90*getNbrOfCP(k['depdate'],k['retdate'])
+  return nicefy(sorted(mylist, key=lambda k:
+    k['contents']['price'] + options["cp_penalty"]*getNbrOfCP(datetime.fromtimestamp(float(k['contents']['outbound']['depDate'])/1000),datetime.fromtimestamp(float(k['contents']['inbound']['depDate'])/1000))
     )[:10])
 
 def nicefy(list):
   nice_list = []
   for flight in list:
+    deptime = datetime.fromtimestamp(float(flight['contents']['outbound']['depDate'])/1000)
+    rettime = datetime.fromtimestamp(float(flight['contents']['inbound']['depDate'])/1000)
     nice_list.append({
       "price":flight['contents']['price'],
-      "depdate": flight['depdate'],
+      "depdate": flight['contents']['outbound']['depDate'],
       "retdate": flight['retdate'],
-      "pc": getNbrOfCP(flight['depdate'],flight['retdate'])
+      "deptime": deptime.strftime("%Y-%m-%d %H:%M:%S"),
+      "rettime": rettime.strftime("%Y-%m-%d %H:%M:%S"),
+      "cp": getNbrOfCP(deptime,rettime),
+      "duration": getDuration(flight['depdate'],flight['retdate']),
+      "contents": flight['contents']
       })
   return nice_list
 
-def req(mydates):
+def req(options):
+  mydates = dates(datetime.strptime(options["last_date"], "%Y-%m-%d").date())
   list_flights = []
   for date in mydates:
-    print date["start"]
-    print date["end"]
     options = {
       "depdate":date["start"],
-      "from":"PAR",
-      "to":"MIR",
+      "from":options["from"],
+      "to":options["to"],
       "direct":"false",
       "range":3,
       "exclude-exact":"false",
       "retdate":date["end"],
     }
     post_response = requests.get(url='http://flights-results.liligo.fr/servlet/flight-cache',headers=headers, params=options)
-    print json.loads(post_response.text)
     items = json.loads(post_response.text)["items"]
-    print len(items)
     list_flights = list_flights + items
   return list_flights
 
-mydates = dates(datetime.strptime("2017-07-15", "%Y-%m-%d").date())
-print(mydates)
-list_flights = req(mydates)
+# print(mydates)
+options = {
+    "cp_penalty": 90,
+    "from":"PAR",
+    "to":"MIR",
+    "last_date": "2017-06-12"
+}
+mydates = dates(datetime.strptime(options["last_date"], "%Y-%m-%d").date())
+list_flights = req(options)
 # getbestflights(json.loads(post_response.text))
-print getbestflights(list_flights)
+bestflights =  getbestflights(list_flights, options)
+
+
+print "{:<8} {:<25} {:<25} {:<5} {:<5}".format('price','deptime','rettime', 'cp', 'duration')
+for flight in bestflights:
+    print "{:<8} {:<25} {:<25} {:<5} {:<5}".format(flight['price'],flight['deptime'],flight['rettime'],flight['cp'], flight["duration"])
+datetime.now().time()
+datetime.now().hour
+datetime.strptime(datetime.now(), "%Y-%m-%d")
