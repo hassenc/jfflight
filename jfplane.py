@@ -147,7 +147,7 @@ def getbestflights(mylist, options):
   mylist = [x for x in mylist if getDuration(x['depdate'],x['retdate'])>1]
   return nicefy(sorted(mylist, key=lambda k:
     k['contents']['price'] + options["cp_penalty"]*getNbrOfCP(datetime.fromtimestamp(float(k['contents']['outbound']['depDate'])/1000),datetime.fromtimestamp(float(k['contents']['inbound']['depDate'])/1000))
-    )[:10])
+    )[:options["nbr_results"]])
 
 def nicefy(list):
   nice_list = []
@@ -186,10 +186,11 @@ def req(options):
 
 # print(mydates)
 options = {
-    "cp_penalty": 90,
+    "nbr_results": 20,
+    "cp_penalty": 0,
     "from":"PAR",
-    "to":"MIR",
-    "last_date": "2017-06-12"
+    "to":"GOA",
+    "last_date": "2017-08-31"
 }
 mydates = dates(datetime.strptime(options["last_date"], "%Y-%m-%d").date())
 list_flights = req(options)
@@ -200,6 +201,3 @@ bestflights =  getbestflights(list_flights, options)
 print "{:<8} {:<25} {:<25} {:<5} {:<5}".format('price','deptime','rettime', 'cp', 'duration')
 for flight in bestflights:
     print "{:<8} {:<25} {:<25} {:<5} {:<5}".format(flight['price'],flight['deptime'],flight['rettime'],flight['cp'], flight["duration"])
-datetime.now().time()
-datetime.now().hour
-datetime.strptime(datetime.now(), "%Y-%m-%d")
