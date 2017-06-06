@@ -10,22 +10,21 @@ var path = require("path"),
  */
 exports.runScript = function (req, res) {
   var options = {
-      "nbr_results": 20,
-      "cp_penalty": 0,
-      "from":"PAR",
-      "to":"GOA",
-      "last_date": "2017-08-31"
+      "nbr_results": 40,
+      "cp_penalty": req.query.cp_penalty != undefined ? parseInt(req.query.cp_penalty) : 90,
+      "from": req.query.from || "PAR",
+      "to": req.query.to || "GOA",
+      "last_date": req.query.last_date || "2017-08-31"
   }
-  var dates = getQueryDates("2017-08-31")
+  console.log(options)
+  var dates = getQueryDates(options["last_date"])
 	var result = [];
   var completed_requests = 0;
   for (var i = 0; i < dates.length; i++) {
     var params = {
         "depdate":dates[i]["start"],
-        "from":"PAR",
-        // "from":options["from"],
-        "to":"MIR",
-        // "to":options["to"],
+        "from":options["from"],
+        "to":options["to"],
         "direct":"false",
         "range":3,
         "exclude-exact":"false",
@@ -45,7 +44,7 @@ exports.runScript = function (req, res) {
         if (body) {
           var newResults = JSON.parse(body)["items"];
           result = result.concat(newResults)
-          console.log(newResults.length)
+          // console.log(newResults.length)
           completed_requests ++;
           if (completed_requests == dates.length) {
             return res.status(200).send({
@@ -108,7 +107,7 @@ var getMaxSpan = function(date) {
 var getNbrOfCP = function(date,date2) {
   var start = date;
   var end = date2;
-  console.log(start)
+  // console.log(start)
   var temp = start.clone();
   var total = 0;
   while (temp <= end) {
@@ -129,6 +128,8 @@ var getNbrOfCP = function(date,date2) {
 }
 
 var getKPI = function(flight, options) {
+    // console.log(options["cp_penalty"])
+    // console.log(flight.cp)
     return flight['contents']['price'] + options["cp_penalty"]*flight.cp
 }
 
@@ -138,16 +139,20 @@ var getbestflights = function(mylist, options) {
     return getDuration(el.depdate,el.retdate) > 1;
   });
   for (var i = 0; i < mylist.length; i++) {
-    mylist[i].cp = getNbrOfCP(moment(parseInt(mylist[i]['contents']['outbound']['depDate'])),moment(parseInt(mylist[i]['contents']['inbound']['depDate'])))
+    var deptime = moment(parseInt(mylist[i]['contents']['outbound']['depDate']));
+    var rettime = moment(parseInt(mylist[i]['contents']['inbound']['depDate']));
+    mylist[i].deptime = deptime.format('MMMM Do YYYY, h:mm:ss a')
+    mylist[i].rettime = rettime.format('MMMM Do YYYY, h:mm:ss a')
+    mylist[i].cp = getNbrOfCP(deptime,rettime)
     mylist[i].kpi = getKPI(mylist[i],options)
     mylist[i].duration = getDuration(mylist[i]['depdate'],mylist[i]['retdate'])
   };
-  console.log("filter")
-  console.log(mylist.length)
+  // console.log("filter")
+  // console.log(mylist.length)
   mylist.sort(function(a,b) {
     return a.kpi - b.kpi;
   })
-  console.log(mylist.length)
+  // console.log(mylist.length)
   return mylist.slice(0,options["nbr_results"]);
   // return nicefy(sorted(mylist, key=lambda k:
   // k['contents']['price'] + options["cp_penalty"]*getNbrOfCP(datetime.fromtimestamp(float(k['contents']['outbound']['depDate'])/1000),datetime.fromtimestamp(float(k['contents']['inbound']['depDate'])/1000))
