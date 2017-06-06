@@ -45,6 +45,7 @@ exports.runScript = function (req, res) {
         if (body) {
           var newResults = JSON.parse(body)["items"];
           result = result.concat(newResults)
+          console.log(newResults.length)
           completed_requests ++;
           if (completed_requests == dates.length) {
             return res.status(200).send({
@@ -116,25 +117,28 @@ var getNbrOfCP = function(date,date2) {
     }
     temp = temp.add(1,"days");
   }
-  // if ((isWorkable(start) is true) and (start.hour>20)):
-  //   print "yooooooo"
-  //   print start
-  //   total = total - 1
-  // if ((isWorkable(end) is true) and (start.hour<7)):
-  //   total = total - 1
+  if ((isWorkable(start) == true) && (start.hour()>20)) {
+
+    total = total - 1
+  }
+  if ((isWorkable(end) == true) && (start.hour()<7)) {
+    
+    total = total - 1
+  }
   return total
 }
 
 var getKPI = function(flight, options) {
-    return flight['contents']['price'] + options["cp_penalty"]*getNbrOfCP(moment(parseInt(flight['contents']['outbound']['depDate'])),moment(parseInt(flight['contents']['inbound']['depDate'])))
+    return flight['contents']['price'] + options["cp_penalty"]*flight.cp
 }
 
 var getbestflights = function(mylist, options) {
-  //TODO compute parseInt here/ compute getNbr of CP and then pass it for kpi
+  //TODO compute parseInt here/ compute getNbr of CP && then pass it for kpi
   var mylist = mylist.filter(function(el) {
     return getDuration(el.depdate,el.retdate) > 1;
   });
   for (var i = 0; i < mylist.length; i++) {
+    mylist[i].cp = getNbrOfCP(moment(parseInt(mylist[i]['contents']['outbound']['depDate'])),moment(parseInt(mylist[i]['contents']['inbound']['depDate'])))
     mylist[i].kpi = getKPI(mylist[i],options)
     mylist[i].duration = getDuration(mylist[i]['depdate'],mylist[i]['retdate'])
   };
@@ -144,7 +148,7 @@ var getbestflights = function(mylist, options) {
     return a.kpi - b.kpi;
   })
   console.log(mylist.length)
-  return mylist;
+  return mylist.slice(0,options["nbr_results"]);
   // return nicefy(sorted(mylist, key=lambda k:
   // k['contents']['price'] + options["cp_penalty"]*getNbrOfCP(datetime.fromtimestamp(float(k['contents']['outbound']['depDate'])/1000),datetime.fromtimestamp(float(k['contents']['inbound']['depDate'])/1000))
   // )[:options["nbr_results"]])
