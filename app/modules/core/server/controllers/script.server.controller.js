@@ -1,53 +1,66 @@
-'use strict';
+"use strict";
 
+var moment = require("moment");
 var request = require("request");
-var path = require('path'),
-  config = require(path.resolve('./config/config'));
+var path = require("path"),
+  config = require(path.resolve("./config/config"));
 
 /**
  * Run Script
  */
 exports.runScript = function (req, res) {
-	var result;
-  var date = {
-  start:"2017-08-31",
-  end:"2017-08-31"
-  }
-  var params = {
-      "depdate":date["start"],
+  var options = {
+      "nbr_results": 20,
+      "cp_penalty": 0,
       "from":"PAR",
-      // "from":options["from"],
-      "to":"MIR",
-      // "to":options["to"],
-      "direct":"false",
-      "range":3,
-      "exclude-exact":"false",
-      "retdate":date["end"],
-    }
-  request.get({url: "http://flights-results.liligo.fr/servlet/flight-cache", 
-             qs: params},
-            function(error, response, body){
-            	if (error) {
-            		console.log("Error")
-            		console.log(error)
-            		return res.status(404).send({
-								    data: error,
-								    message: 'Error'
-								  });
-            	}
-            	if (body) {
-            		result = body
-            		  return res.status(200).send({
-								    data: JSON.parse(body),
-								    message: 'Script running'
-								  });
-            	}
+      "to":"GOA",
+      "last_date": "2017-08-31"
+  }
+  var dates = getQueryDates("2017-08-31")
+	var result = [];
+  var completed_requests = 0;
+  for (var i = 0; i < dates.length; i++) {
+    var params = {
+        "depdate":dates[i]["start"],
+        "from":"PAR",
+        // "from":options["from"],
+        "to":"MIR",
+        // "to":options["to"],
+        "direct":"false",
+        "range":3,
+        "exclude-exact":"false",
+        "retdate":dates[i]["end"],
+      }
+    request.get({url: "http://flights-results.liligo.fr/servlet/flight-cache", 
+               qs: params},
+      function(error, response, body){
+        if (error) {
+          console.log("Error")
+          console.log(error)
+          return res.status(404).send({
+              data: error,
+              message: "Error"
             });
+        }
+        if (body) {
+          var newResults = JSON.parse(body)["items"];
+          result = result.concat(newResults)
+          completed_requests ++;
+          if (completed_requests == dates.length) {
+            return res.status(200).send({
+              data: getbestflights(result,options) ,
+              message: "Script running"
+            });
+          }
+      	}
+      });
+  };
 
 
-  // return res.status(404).send({
-  //   message: 'Script Failed'
-  // });
+  // return res.status(200).send({
+  //    data: dates,
+  //    message: "Script running"
+  //  });
 };
 
 
@@ -55,68 +68,93 @@ exports.runScript = function (req, res) {
 var HOLIDAYS = ["2017-07-14","2017-08-15","2017-11-01","2017-11-11","2017-12-25","2018-01-01"];
 
 var isWeekend = function(date) {	
-  if ((date.weekday() == 5) || (date.weekday() == 6)) {
-    return True
+  if ((date.day() == 6) || (date.day() == 7)) {
+    return true
   }
   else {
-    return False
+    return false
   }
 }
 
 var isHoliday = function(date) {
   for (var i = 0; i < HOLIDAYS.length; i++) {
-    if (date.date() == datetime.strptime(HOLIDAYS[i], "%Y-%m-%d").date()) {
-      return True
+    if (date.format("YYYY-MM-DD") == HOLIDAYS[i]) {
+      return true
     }
   }
-  return False
+  return false
 }
 
 var isWorkable = function(date) {
   if (isHoliday(date) || isWeekend(date)){
-    return False
+    return false
   } else {
-    return True
+    return true
   }
 }
 
 var getMaxSpan = function(date) {
   var span = 0
   var nextDay = date
-  while (isWorkable(nextDay) == False) {
+  while (isWorkable(nextDay) == false) {
     span = span + 1
-    nextDay = nextDay + timedelta(days=1)
+    var nextDay = nextDay + timedelta(days=1)
   	return span
   }
 }
 
 
-// var getNbrOfCP = function(date,date2) {
-//   start = date
-//   end = date2
-//   print date
-//   print date2.date()
-//   temp = start
-//   total = 0
-//   while temp <= end:
-//     if (isWorkable(temp) is True):
-//       total = total + 1
-//     temp = temp + timedelta(days=1)
-//   print start.hour
-//   if ((isWorkable(start) is True) and (start.hour>20)):
-//     print "yooooooo"
-//     print start
-//     total = total - 1
-//   if ((isWorkable(end) is True) and (start.hour<7)):
-//     total = total - 1
-//   return total
-// }
+var getNbrOfCP = function(date,date2) {
+  var start = date;
+  var end = date2;
+  console.log(start)
+  var temp = start.clone();
+  var total = 0;
+  while (temp <= end) {
+    if (isWorkable(temp) == true) {
+      total = total + 1;
+    }
+    temp = temp.add(1,"days");
+  }
+  // if ((isWorkable(start) is true) and (start.hour>20)):
+  //   print "yooooooo"
+  //   print start
+  //   total = total - 1
+  // if ((isWorkable(end) is true) and (start.hour<7)):
+  //   total = total - 1
+  return total
+}
 
+var getKPI = function(flight, options) {
+    return flight['contents']['price'] + options["cp_penalty"]*getNbrOfCP(moment(parseInt(flight['contents']['outbound']['depDate'])),moment(parseInt(flight['contents']['inbound']['depDate'])))
+}
 
-// var getDuration = function(date,date2):
-//   start = datetime.strptime(date, "%Y-%m-%d")
-//   end = datetime.strptime(date2, "%Y-%m-%d")
-//   return (end-start).days
+var getbestflights = function(mylist, options) {
+  //TODO compute parseInt here/ compute getNbr of CP and then pass it for kpi
+  var mylist = mylist.filter(function(el) {
+    return getDuration(el.depdate,el.retdate) > 1;
+  });
+  for (var i = 0; i < mylist.length; i++) {
+    mylist[i].kpi = getKPI(mylist[i],options)
+    mylist[i].duration = getDuration(mylist[i]['depdate'],mylist[i]['retdate'])
+  };
+  console.log("filter")
+  console.log(mylist.length)
+  mylist.sort(function(a,b) {
+    return a.kpi - b.kpi;
+  })
+  console.log(mylist.length)
+  return mylist;
+  // return nicefy(sorted(mylist, key=lambda k:
+  // k['contents']['price'] + options["cp_penalty"]*getNbrOfCP(datetime.fromtimestamp(float(k['contents']['outbound']['depDate'])/1000),datetime.fromtimestamp(float(k['contents']['inbound']['depDate'])/1000))
+  // )[:options["nbr_results"]])
+}
+
+var getDuration = function(date,date2) {
+  var start = moment(date)
+  var end = moment(date2)
+  return end.diff(start, 'days')
+}
 
 var getEndDates = function(date) {
   // var endDates = []
@@ -129,28 +167,27 @@ var getEndDates = function(date) {
   //   endDates.append((date + timedelta(days=maxSpan)).date())
   // print "endDates"
   // return endDates
-  return date
+  return [date.clone()]
 }
 
 
 
-var dates = function(lastDate) {
-
+var getQueryDates = function(lastDate) {
   var result = []
-  var date = {"start":datetime.now(), "end":datetime.now()}
-  var today = datetime.now() + timedelta(days=2)
-  var date = today
-  var i = 0
-  while ((date.date() < lastDate) && (i<400)) {
-  	i = i+1
+  // var date = {"start":datetime.now(), "end":datetime.now()}
+  var today = moment().add(2, "days");
+  var date = today;
+  var i = 0;
+  while ((date < moment(lastDate)) && (i<400)) {
+  	i = i+1;
     if (date) {
-    // if ((isWorkable(date) is False) or (isWorkable(date + timedelta(days=1)) is False)):
-      var endDates = getEndDates(date)
+    // if ((isWorkable(date) is false) or (isWorkable(date + timedelta(days=1)) is false)):
+      var endDates = getEndDates(date);
       for (var i = 0; i < endDates.length; i++) {
-        result.append({"start":date.date(), "end":endDates[i]})
+        result.push({"start":date.format("YYYY-MM-DD"), "end":endDates[i].format("YYYY-MM-DD")})
       };
     }
-    date = date + timedelta(days=6)
+    date = date.add(6, "days");
   }
   return result
 }
