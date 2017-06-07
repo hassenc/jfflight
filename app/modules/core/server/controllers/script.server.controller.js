@@ -136,16 +136,16 @@ var getKPI = function(flight, options) {
 var getbestflights = function(mylist, options) {
   //TODO compute parseInt here/ compute getNbr of CP && then pass it for kpi
   var mylist = mylist.filter(function(el) {
-    return getDuration(el.depdate,el.retdate) > 1;
+    return getDuration(el.depdate,el.retdate) > 2;
   });
   for (var i = 0; i < mylist.length; i++) {
     var deptime = moment(parseInt(mylist[i]['contents']['outbound']['depDate']));
     var rettime = moment(parseInt(mylist[i]['contents']['inbound']['depDate']));
-    mylist[i].deptime = deptime.format('MMMM Do YYYY, h:mm:ss a')
-    mylist[i].rettime = rettime.format('MMMM Do YYYY, h:mm:ss a')
+    mylist[i].deptime = deptime
+    mylist[i].rettime = rettime
     mylist[i].cp = getNbrOfCP(deptime,rettime)
     mylist[i].kpi = getKPI(mylist[i],options)
-    mylist[i].duration = getDuration(mylist[i]['depdate'],mylist[i]['retdate'])
+    mylist[i].duration = getDuration(deptime,rettime)
   };
   // console.log("filter")
   // console.log(mylist.length)
@@ -160,9 +160,9 @@ var getbestflights = function(mylist, options) {
 }
 
 var getDuration = function(date,date2) {
-  var start = moment(date)
-  var end = moment(date2)
-  return end.diff(start, 'days')
+  var start = moment(date).clone().startOf('day')
+  var end = moment(date2).clone().endOf('day')
+  return end.diff(start, 'days') + 1;
 }
 
 var getEndDates = function(date) {

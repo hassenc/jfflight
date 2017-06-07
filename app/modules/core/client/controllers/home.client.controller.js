@@ -13,7 +13,7 @@
     vm.options = {
       cp_penalty : 40,
       from : "PAR",
-      to : "GOA",
+      to : "MIR",
       selected_date : moment().add(2,'months').toDate(),
       last_date : null,
     }

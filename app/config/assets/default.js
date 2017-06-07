@@ -27,6 +27,8 @@ module.exports = {
         'public/lib/angularjs-slider/dist/rzslider.js',
         'public/lib/owasp-password-strength-test/owasp-password-strength-test.js',
         'public/lib/moment/moment.js',
+        'public/lib/moment-timezone/moment-timezone.js',
+        'public/lib/moment-timezone/builds/moment-timezone-with-data.js',
         // endbower
       ],
       tests: ['public/lib/angular-mocks/angular-mocks.js']

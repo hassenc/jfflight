@@ -25,6 +25,7 @@
       <input class="col-md-4" ng-model="vm.options.to"></input>
       <table class="table table-stripped">
         <tt>
+          <th>tile</th>
           <th>depdate</th>
           <th>rethate</th>
           <th>duration</th>
@@ -33,8 +34,16 @@
           <th>kpi</th>
         </tt>
         <tr ng-repeat="flight in vm.flights">
-          <td>{{flight.deptime}}</td>
-          <td>{{flight.rettime}}</td>
+          <td><tile-flight
+              deptime=flight.deptime
+              rettime=flight.rettime
+              price=flight.contents.price
+              duration=flight.duration
+            >
+            </tile-flight>
+          </td>
+          <td>{{flight.local_deptime}}</td>
+          <td>{{flight.local_rettime}}</td>
           <td>{{flight.duration}}</td>
           <td>{{flight.cp}}</td>
           <td>{{flight.contents.price}}</td>
