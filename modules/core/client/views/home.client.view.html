@@ -1,0 +1,55 @@
+<section>
+  <div class="jumbotron text-center">
+    <div class="row">
+      <a class="btn btn-primary btn-lg" ng-click="vm.runScript()" target="_blank">Run</a>
+      <br>
+      <div ng-controller="DatepickerPopupCtrl">
+        <div class="row">
+          <div class="col-md-6">
+            <p class="input-group">
+              <input type="text" class="form-control" uib-datepicker-popup="{{format}}" ng-model="vm.options.selected_date" is-open="popup1.opened" datepicker-options="dateOptions" ng-required="true" close-text="Close" alt-input-formats="altInputFormats" />
+              <span class="input-group-btn">
+                <button type="button" class="btn btn-default" ng-click="open1()"><i class="glyphicon glyphicon-calendar"></i></button>
+              </span>
+            </p>
+          </div>
+        </div>
+      </div> 
+      <div class="col-md-6">
+       <rzslider
+       rz-slider-model="vm.slider.value"
+       rz-slider-options="vm.slider.options">
+      </rzslider>
+      </div>
+      <input class="col-md-4" ng-model="vm.options.from"></input>
+      <input class="col-md-4" ng-model="vm.options.to"></input>
+      <table class="table table-stripped">
+        <tt>
+          <th>tile</th>
+          <th>depdate</th>
+          <th>rethate</th>
+          <th>duration</th>
+          <th>cp</th>
+          <th>contents.price</th>
+          <th>kpi</th>
+        </tt>
+        <tr ng-repeat="flight in vm.flights">
+          <td><tile-flight
+              deptime=flight.deptime
+              rettime=flight.rettime
+              price=flight.contents.price
+              duration=flight.duration
+            >
+            </tile-flight>
+          </td>
+          <td>{{flight.local_deptime}}</td>
+          <td>{{flight.local_rettime}}</td>
+          <td>{{flight.duration}}</td>
+          <td>{{flight.cp}}</td>
+          <td>{{flight.contents.price}}</td>
+          <td>{{flight.kpi}}</td>
+        </tr>
+      </table>
+    </div>
+  </div>
+</section>
